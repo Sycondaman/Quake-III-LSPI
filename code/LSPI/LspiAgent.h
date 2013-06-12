@@ -47,7 +47,7 @@ using namespace thrust;
 using namespace blas;
 
 template <typename vector_type>
-class LspiAgent: public Agent
+class LspiAgent
 {
 	public:
 		LspiAgent(thrust::host_vector<float> policy, float disc) : w(policy), discount(disc) {}
