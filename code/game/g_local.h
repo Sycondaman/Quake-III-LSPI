@@ -28,9 +28,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "bg_public.h"
 #include "g_public.h"
 
-//#define LOCK_OBSERVE
-
 //==================================================================
+
+#define USER_SPECTATOR
 
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq3"
