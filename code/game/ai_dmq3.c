@@ -2925,6 +2925,10 @@ float BotEntityVisible(int viewer, vec3_t eye, vec3_t viewangles, float fov, int
 ==================
 BotFindEnemy
 ==================
+Normally this will update the sight time (which determines when your bot can start shooting based on
+reaction time) everytime it spots an enemy when you use curenemy < 0. This causes problems when peeking
+at the state, since we always want to assume we have no enemy. If you pass in -2 instead this behavior
+will act appropriately by only updating the sight time if a new enemy is found.
 */
 int BotFindEnemy(bot_state_t *bs, int curenemy) {
 	int i, healthdecrease;
@@ -3039,9 +3043,15 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 			}
 		}
 		//found an enemy
+		if (curenemy >= 0 || (curenemy == -2 && bs->enemy != entinfo.number) 
+		{
+			bs->enemysight_time = FloatTime() - 2;
+		}
+		else 
+		{
+			bs->enemysight_time = FloatTime();
+		}
 		bs->enemy = entinfo.number;
-		if (curenemy >= 0 || curenemy == -2) bs->enemysight_time = FloatTime() - 2;
-		else bs->enemysight_time = FloatTime();
 		bs->enemysuicide = qfalse;
 		bs->enemydeath_time = 0;
 		bs->enemyvisible_time = FloatTime();
