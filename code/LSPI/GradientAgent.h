@@ -10,7 +10,6 @@
 
 #include "stdafx.h"
 #include "sample.h"
-#include "Agent.h"
 #include <vector>
 #include "blas.h"
 #include "Matrix.h"
@@ -45,7 +44,7 @@ __host__ __device__ T operator()(const T &x) const
 };
 
 template <typename vector_type>
-class GradientAgent: public Agent
+class GradientAgent
 {
 	public:
 		vector_type w;
