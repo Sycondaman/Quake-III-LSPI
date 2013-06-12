@@ -75,16 +75,16 @@ int numnodeswitches;
 char nodeswitch[MAX_NODESWITCHES+1][144];
 
 // Used to save sample data
-lspi_action_basis_t *bases[MAX_CLIENTS];
-lspi_action_basis_t *last_bases[MAX_CLIENTS]; 
-int last_actions[MAX_CLIENTS]; 
+lspi_action_basis_t *basis[MAX_CLIENTS];
+lspi_action_basis_t *last_basis[MAX_CLIENTS]; 
+int last_action[MAX_CLIENTS]; 
 
 // Used to determine when to check LSPI/Gradient bot actions
 int action_chosen[MAX_CLIENTS]; // Used to determine if an agent has chosen an action
 
 // File pointers for saving data
-FILE *sample_files[MAX_CLIENTS];
-FILE *reward_files[MAX_CLIENTS];
+FILE *sample_file[MAX_CLIENTS];
+FILE *reward_file[MAX_CLIENTS];
 
 // For tracking reward over time
 float total_reward[MAX_CLIENTS];
@@ -1191,21 +1191,21 @@ void UpdateBasis(bot_state_t *bs)
 
 	if(last_action[bs->client] != -1) // If this isn't the first time we should update the "last basis" first
 	{
-		memcpy(last_basis[bs->client], bases[bs->client], sizeof(lspi_action_basis_t));
+		memcpy(last_basis[bs->client], basis[bs->client], sizeof(lspi_action_basis_t));
 	}
 	else
 	{
 		if(bs->bottype == 1)
 		{
-			fprintf(rfile[bs->client], "LSPI Bot\n");
+			fprintf(reward_file[bs->client], "LSPI Bot\n");
 		}
 		else if(bs->bottype == 2)
 		{
-			fprintf(rfile[bs->client], "Gradient Bot\n");
+			fprintf(reward_file[bs->client], "Gradient Bot\n");
 		}
 		else
 		{
-			fprintf(rfile[bs->client], "Quake Bot\n");
+			fprintf(reward_file[bs->client], "Quake Bot\n");
 		}
 	}
 
@@ -1221,74 +1221,74 @@ void UpdateBasis(bot_state_t *bs)
 	trap_BotGetTopGoal(bs->gs, &cur_goal);
 
 	// Reward items
-	bases[bs->client]->kill_diff = bs->num_kills - bases[bs->client]->kills;
-	bases[bs->client]->death_diff = bs->num_deaths - bases[bs->client]->deaths;
-	bases[bs->client]->health_diff = bs->cur_ps.stats[STAT_HEALTH] - bases[bs->client]->stat_health;
-	bases[bs->client]->armor_diff = bs->cur_ps.stats[STAT_ARMOR] - bases[bs->client]->stat_armor;
-	bases[bs->client]->hit_count_diff = bs->lasthitcount - bases[bs->client]->last_hit_count;
+	basis[bs->client]->kill_diff = bs->num_kills - basis[bs->client]->kills;
+	basis[bs->client]->death_diff = bs->num_deaths - basis[bs->client]->deaths;
+	basis[bs->client]->health_diff = bs->cur_ps.stats[STAT_HEALTH] - basis[bs->client]->stat_health;
+	basis[bs->client]->armor_diff = bs->cur_ps.stats[STAT_ARMOR] - basis[bs->client]->stat_armor;
+	basis[bs->client]->hit_count_diff = bs->lasthitcount - basis[bs->client]->last_hit_count;
 
 	// Stats + K&D
-	bases[bs->client]->stat_health = bs->cur_ps.stats[STAT_HEALTH];
-	bases[bs->client]->stat_armor = bs->cur_ps.stats[STAT_ARMOR];
-	bases[bs->client]->stat_max_health = bs->cur_ps.stats[STAT_MAX_HEALTH];
-	bases[bs->client]->kills = bs->num_kills;
-	bases[bs->client]->deaths = bs->num_deaths;
+	basis[bs->client]->stat_health = bs->cur_ps.stats[STAT_HEALTH];
+	basis[bs->client]->stat_armor = bs->cur_ps.stats[STAT_ARMOR];
+	basis[bs->client]->stat_max_health = bs->cur_ps.stats[STAT_MAX_HEALTH];
+	basis[bs->client]->kills = bs->num_kills;
+	basis[bs->client]->deaths = bs->num_deaths;
 
 	// Powerups
-	bases[bs->client]->pw_quad = bs->cur_ps.powerups[PW_QUAD];
-	bases[bs->client]->pw_battlesuit= bs->cur_ps.powerups[PW_BATTLESUIT];
-	bases[bs->client]->pw_haste = bs->cur_ps.powerups[PW_HASTE];
-	bases[bs->client]->pw_invis = bs->cur_ps.powerups[PW_INVIS];
-	bases[bs->client]->pw_regen = bs->cur_ps.powerups[PW_REGEN];
-	bases[bs->client]->pw_flight = bs->cur_ps.powerups[PW_FLIGHT];
-	bases[bs->client]->pw_scout = bs->cur_ps.powerups[PW_SCOUT];
-	bases[bs->client]->pw_guard = bs->cur_ps.powerups[PW_GUARD];
-	bases[bs->client]->pw_doubler = bs->cur_ps.powerups[PW_DOUBLER];
-	bases[bs->client]->pw_ammoregen = bs->cur_ps.powerups[PW_AMMOREGEN];
-	bases[bs->client]->pw_invulnerability = bs->cur_ps.powerups[PW_INVULNERABILITY];
+	basis[bs->client]->pw_quad = bs->cur_ps.powerups[PW_QUAD];
+	basis[bs->client]->pw_battlesuit= bs->cur_ps.powerups[PW_BATTLESUIT];
+	basis[bs->client]->pw_haste = bs->cur_ps.powerups[PW_HASTE];
+	basis[bs->client]->pw_invis = bs->cur_ps.powerups[PW_INVIS];
+	basis[bs->client]->pw_regen = bs->cur_ps.powerups[PW_REGEN];
+	basis[bs->client]->pw_flight = bs->cur_ps.powerups[PW_FLIGHT];
+	basis[bs->client]->pw_scout = bs->cur_ps.powerups[PW_SCOUT];
+	basis[bs->client]->pw_guard = bs->cur_ps.powerups[PW_GUARD];
+	basis[bs->client]->pw_doubler = bs->cur_ps.powerups[PW_DOUBLER];
+	basis[bs->client]->pw_ammoregen = bs->cur_ps.powerups[PW_AMMOREGEN];
+	basis[bs->client]->pw_invulnerability = bs->cur_ps.powerups[PW_INVULNERABILITY];
 
 	// Ammo
-	bases[bs->client]->wp_gauntlet = bs->cur_ps.ammo[WP_GAUNTLET];
-	bases[bs->client]->wp_machinegun = bs->cur_ps.ammo[WP_MACHINEGUN];
-	bases[bs->client]->wp_shotgun = bs->cur_ps.ammo[WP_SHOTGUN];
-	bases[bs->client]->wp_grenade_launcher = bs->cur_ps.ammo[WP_GRENADE_LAUNCHER];
-	bases[bs->client]->wp_rocket_launcher = bs->cur_ps.ammo[WP_ROCKET_LAUNCHER];
-	bases[bs->client]->wp_lightning = bs->cur_ps.ammo[WP_LIGHTNING];
-	bases[bs->client]->wp_railgun = bs->cur_ps.ammo[WP_RAILGUN];
-	bases[bs->client]->wp_plasmagun = bs->cur_ps.ammo[WP_PLASMAGUN];
-	bases[bs->client]->wp_bfg = bs->cur_ps.ammo[WP_BFG];
-	bases[bs->client]->wp_grappling_hook = bs->cur_ps.ammo[WP_GRAPPLING_HOOK];
+	basis[bs->client]->wp_gauntlet = bs->cur_ps.ammo[WP_GAUNTLET];
+	basis[bs->client]->wp_machinegun = bs->cur_ps.ammo[WP_MACHINEGUN];
+	basis[bs->client]->wp_shotgun = bs->cur_ps.ammo[WP_SHOTGUN];
+	basis[bs->client]->wp_grenade_launcher = bs->cur_ps.ammo[WP_GRENADE_LAUNCHER];
+	basis[bs->client]->wp_rocket_launcher = bs->cur_ps.ammo[WP_ROCKET_LAUNCHER];
+	basis[bs->client]->wp_lightning = bs->cur_ps.ammo[WP_LIGHTNING];
+	basis[bs->client]->wp_railgun = bs->cur_ps.ammo[WP_RAILGUN];
+	basis[bs->client]->wp_plasmagun = bs->cur_ps.ammo[WP_PLASMAGUN];
+	basis[bs->client]->wp_bfg = bs->cur_ps.ammo[WP_BFG];
+	basis[bs->client]->wp_grappling_hook = bs->cur_ps.ammo[WP_GRAPPLING_HOOK];
 
 	// Enemy Information
 	if(bs->enemy == -1)
 	{
-		bases[bs->client]->enemy = -1;
-		bases[bs->client]->enemy_is_invisible = -1;
-		bases[bs->client]->enemy_is_shooting = -1;
+		basis[bs->client]->enemy = -1;
+		basis[bs->client]->enemy_is_invisible = -1;
+		basis[bs->client]->enemy_is_shooting = -1;
 	}
 	else
 	{
-		bases[bs->client]->enemy = 1;
-		bases[bs->client]->enemy_is_invisible = EntityIsInvisible(&entinfo);
-		bases[bs->client]->enemy_is_shooting = EntityIsShooting(&entinfo);
-		bases[bs->client]->enemy_weapon = entinfo.weapon;
-		bases[bs->client]->enemy_area_num = bs->lastenemyareanum;
+		basis[bs->client]->enemy = 1;
+		basis[bs->client]->enemy_is_invisible = EntityIsInvisible(&entinfo);
+		basis[bs->client]->enemy_is_shooting = EntityIsShooting(&entinfo);
+		basis[bs->client]->enemy_weapon = entinfo.weapon;
+		basis[bs->client]->enemy_area_num = bs->lastenemyareanum;
 	}
-	bases[bs->client]->enemyposition_time = bs->enemyposition_time;
-	bases[bs->client]->enemy_line_dist = CalculateLineDistance(bs->origin, bs->enemyorigin);
+	basis[bs->client]->enemyposition_time = bs->enemyposition_time;
+	basis[bs->client]->enemy_line_dist = CalculateLineDistance(bs->origin, bs->enemyorigin);
 	
 	// Goal information
-	bases[bs->client]->goal_flags = cur_goal.flags;
+	basis[bs->client]->goal_flags = cur_goal.flags;
 
 	// Area numbers
-	bases[bs->client]->current_area_num = bs->areanum;
-	bases[bs->client]->goal_area_num = cur_goal.areanum;
+	basis[bs->client]->current_area_num = bs->areanum;
+	basis[bs->client]->goal_area_num = cur_goal.areanum;
 
 	// Misc
-	bases[bs->client]->tfl = bs->tfl;
-	bases[bs->client]->last_hit_count = bs->lasthitcount;
+	basis[bs->client]->tfl = bs->tfl;
+	basis[bs->client]->last_hit_count = bs->lasthitcount;
 
-	if(bases[bs->client]->kill_diff > 0)
+	if(basis[bs->client]->kill_diff > 0)
 	{
 		if(bs->bottype == 1)
 		{
@@ -1301,15 +1301,15 @@ void UpdateBasis(bot_state_t *bs)
 	}
 
 	// Write down reward info
-	reward = calculateReward(bases[bs->client]);
+	reward = calculateReward(basis[bs->client]);
 	total_reward[bs->client] += reward;
 	total_actions[bs->client] += 1;
-	fprintf(rfile[bs->client], "%d,%f,%f\n", total_actions[bs->client], reward, total_reward[bs->client]);
+	fprintf(reward_file[bs->client], "%d,%f,%f\n", total_actions[bs->client], reward, total_reward[bs->client]);
 
 	if(bs->bottype == 2)
 	{
 		QueryPerformanceCounter(&before);
-		LspiBot_GradUpdate(bs->client, bases[bs->client], last_basis[bs->client], last_action[bs->client]);
+		LspiBot_GradUpdate(bs->client, basis[bs->client], last_basis[bs->client], last_action[bs->client]);
 		QueryPerformanceCounter(&after);
 
 		policy_update_time[bs->client] += (double)(after.QuadPart - before.QuadPart)/frequency;
@@ -1319,7 +1319,7 @@ void UpdateBasis(bot_state_t *bs)
 
 void SaveSample(bot_state_t *bs, int action)
 {
-	lspi_action_basis_t *b = bases[bs->client];
+	lspi_action_basis_t *b = basis[bs->client];
 	lspi_action_basis_t *l = last_basis[bs->client];
 
 	if(action == -1) // First time, skip it
@@ -1328,71 +1328,71 @@ void SaveSample(bot_state_t *bs, int action)
 	}
 
 	// Action
-	fprintf(sfile[bs->client], "%d,", action);
+	fprintf(sample_file[bs->client], "%d,", action);
 
 	/***** BEGIN WRITE LAST STATE *****/
 
 	// For calculated reward
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,", l->kill_diff, l->death_diff, l->health_diff, l->armor_diff, l->hit_count_diff);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,", l->kill_diff, l->death_diff, l->health_diff, l->armor_diff, l->hit_count_diff);
 
 	// Note, we don't save kills or deaths, since those are only for calculating diffs
 
 	// Stats
-	fprintf(sfile[bs->client], "%d,%d,%d,", l->stat_health, l->stat_armor, l->stat_max_health);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", l->stat_health, l->stat_armor, l->stat_max_health);
 
 	// Powerups
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", l->pw_quad, l->pw_battlesuit, l->pw_haste, l->pw_invis, l->pw_regen, l->pw_flight, l->pw_scout, l->pw_guard, l->pw_doubler, l->pw_ammoregen, l->pw_invulnerability);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", l->pw_quad, l->pw_battlesuit, l->pw_haste, l->pw_invis, l->pw_regen, l->pw_flight, l->pw_scout, l->pw_guard, l->pw_doubler, l->pw_ammoregen, l->pw_invulnerability);
 
 	// Ammo
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", l->wp_gauntlet, l->wp_machinegun, l->wp_shotgun, l->wp_grenade_launcher, l->wp_rocket_launcher, l->wp_lightning, l->wp_railgun, l->wp_plasmagun, l->wp_bfg, l->wp_grappling_hook);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", l->wp_gauntlet, l->wp_machinegun, l->wp_shotgun, l->wp_grenade_launcher, l->wp_rocket_launcher, l->wp_lightning, l->wp_railgun, l->wp_plasmagun, l->wp_bfg, l->wp_grappling_hook);
 
 	// Enemy Info
-	fprintf(sfile[bs->client], "%d,%.8f,%.8f,%d,%d,%d,", l->enemy, l->enemy_line_dist, l->enemyposition_time, l->enemy_is_invisible, l->enemy_is_shooting, l->enemy_weapon);
+	fprintf(sample_file[bs->client], "%d,%.8f,%.8f,%d,%d,%d,", l->enemy, l->enemy_line_dist, l->enemyposition_time, l->enemy_is_invisible, l->enemy_is_shooting, l->enemy_weapon);
 
 	// Goal Info
-	fprintf(sfile[bs->client], "%d,%d,", l->goal_flags, l->item_type);
+	fprintf(sample_file[bs->client], "%d,%d,", l->goal_flags, l->item_type);
 
 	// Exit Information
-	fprintf(sfile[bs->client], "%d,%d,%d,", l->last_enemy_area_exits, l->goal_area_exits, l->current_area_exits);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", l->last_enemy_area_exits, l->goal_area_exits, l->current_area_exits);
 
 	// Area numbers
-	fprintf(sfile[bs->client], "%d,%d,%d,", l->current_area_num, l->goal_area_num, l->enemy_area_num);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", l->current_area_num, l->goal_area_num, l->enemy_area_num);
 
 	// Misc
-	fprintf(sfile[bs->client], "%d,", l->tfl);
+	fprintf(sample_file[bs->client], "%d,", l->tfl);
 
 	/***** END WRITE LAST STATE *****/
 
 	/***** BEGIN WRITE STATE *****/
 
 	// For calculated reward
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,", b->kill_diff, b->death_diff, b->health_diff, b->armor_diff, b->last_hit_count);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,", b->kill_diff, b->death_diff, b->health_diff, b->armor_diff, b->last_hit_count);
 
 	// Note, we don't save kills or deaths, since those are only for calculating diffs
 
 	// Stats
-	fprintf(sfile[bs->client], "%d,%d,%d,", b->stat_health, b->stat_armor, b->stat_max_health);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", b->stat_health, b->stat_armor, b->stat_max_health);
 
 	// Powerups
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", b->pw_quad, b->pw_battlesuit, b->pw_haste, b->pw_invis, b->pw_regen, b->pw_flight, b->pw_scout, b->pw_guard, b->pw_doubler, b->pw_ammoregen, b->pw_invulnerability);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", b->pw_quad, b->pw_battlesuit, b->pw_haste, b->pw_invis, b->pw_regen, b->pw_flight, b->pw_scout, b->pw_guard, b->pw_doubler, b->pw_ammoregen, b->pw_invulnerability);
 
 	// Ammo
-	fprintf(sfile[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", b->wp_gauntlet, b->wp_machinegun, b->wp_shotgun, b->wp_grenade_launcher, b->wp_rocket_launcher, b->wp_lightning, b->wp_railgun, b->wp_plasmagun, b->wp_bfg, b->wp_grappling_hook);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", b->wp_gauntlet, b->wp_machinegun, b->wp_shotgun, b->wp_grenade_launcher, b->wp_rocket_launcher, b->wp_lightning, b->wp_railgun, b->wp_plasmagun, b->wp_bfg, b->wp_grappling_hook);
 
 	// Enemy Info
-	fprintf(sfile[bs->client], "%d,%.8f,%.8f,%d,%d,%d,", b->enemy, b->enemy_line_dist, b->enemyposition_time, b->enemy_is_invisible, b->enemy_is_shooting, b->enemy_weapon);
+	fprintf(sample_file[bs->client], "%d,%.8f,%.8f,%d,%d,%d,", b->enemy, b->enemy_line_dist, b->enemyposition_time, b->enemy_is_invisible, b->enemy_is_shooting, b->enemy_weapon);
 
 	// Goal Info
-	fprintf(sfile[bs->client], "%d,%d,", b->goal_flags, b->item_type);
+	fprintf(sample_file[bs->client], "%d,%d,", b->goal_flags, b->item_type);
 
 	// Exit Information
-	fprintf(sfile[bs->client], "%d,%d,%d,", b->last_enemy_area_exits, b->goal_area_exits, b->current_area_exits);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", b->last_enemy_area_exits, b->goal_area_exits, b->current_area_exits);
 
 	// Area numbers
-	fprintf(sfile[bs->client], "%d,%d,%d,", b->current_area_num, b->goal_area_num, b->enemy_area_num);
+	fprintf(sample_file[bs->client], "%d,%d,%d,", b->current_area_num, b->goal_area_num, b->enemy_area_num);
 
 	// Misc
-	fprintf(sfile[bs->client], "%d,%d\n", b->tfl, b->last_hit_count);
+	fprintf(sample_file[bs->client], "%d,%d\n", b->tfl, b->last_hit_count);
 
 	/***** END WRITE LAST STATE *****/
 }
@@ -1416,8 +1416,8 @@ void AI_Init(bot_state_t *bs)
 		frequency = li.QuadPart;
 	}
 
-	bases[bs->client] = malloc(sizeof(lspi_action_basis_t));
-	memset(bases[bs->client], 0, sizeof(lspi_action_basis_t));
+	basis[bs->client] = malloc(sizeof(lspi_action_basis_t));
+	memset(basis[bs->client], 0, sizeof(lspi_action_basis_t));
 	if(bs->bottype)
 	{
 		LspiBot_Init(bs->client);
@@ -1439,30 +1439,30 @@ void AI_Init(bot_state_t *bs)
 #ifdef COLLECT_SAMPLES
 	if(bs->client == 0)
 	{
-		sfile[bs->client] = fopen("samples0.dat", "a");
+		sample_file[bs->client] = fopen("samples0.dat", "a");
 	}
 	else if(bs->client == 1)
 	{
-		sfile[bs->client] = fopen("samples1.dat", "a");
+		sample_file[bs->client] = fopen("samples1.dat", "a");
 	}
 	else if(bs->client == 2)
 	{
-		sfile[bs->client] = fopen("samples2.dat", "a");
+		sample_file[bs->client] = fopen("samples2.dat", "a");
 	}
 #endif
 
 	// Calculating reward
 	if(bs->client == 0)
 	{
-		rfile[bs->client] = fopen("reward0.dat", "a");
+		reward_file[bs->client] = fopen("reward0.dat", "a");
 	}
 	else if(bs->client == 1)
 	{
-		rfile[bs->client] = fopen("reward1.dat", "a");
+		reward_file[bs->client] = fopen("reward1.dat", "a");
 	}
 	else if(bs->client == 2)
 	{
-		rfile[bs->client] = fopen("reward2.dat", "a");
+		reward_file[bs->client] = fopen("reward2.dat", "a");
 	}
 }
 
@@ -1471,10 +1471,10 @@ void AI_Shutdown(bot_state_t *bs)
 	FILE *perfFile;
 
 #ifdef COLLECT_SAMPLES
-	fclose(sfile[bs->client]);
+	fclose(sample_file[bs->client]);
 	free(last_basis[bs->client]);
 #endif
-	free(bases[bs->client]);
+	free(basis[bs->client]);
 	if(bs->bottype)
 	{
 		LspiBot_Shutdown(bs->client);
@@ -1499,7 +1499,7 @@ void AI_Shutdown(bot_state_t *bs)
 		fclose(perfFile);
 	}
 
-	fclose(rfile[bs->client]);
+	fclose(reward_file[bs->client]);
 }
 
 int AIEnter_Next(bot_state_t *bs, char *s, int act)
@@ -1510,7 +1510,7 @@ int AIEnter_Next(bot_state_t *bs, char *s, int act)
 	if(act == -1)
 	{
 		QueryPerformanceCounter(&before);
-		action = LspiBot_GetAction(bs->client, bases[bs->client]);
+		action = LspiBot_GetAction(bs->client, basis[bs->client]);
 		QueryPerformanceCounter(&after);
 
 		action_decision_time[bs->client] += (double)(after.QuadPart - before.QuadPart)/frequency;
