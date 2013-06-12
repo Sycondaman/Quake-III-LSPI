@@ -32,6 +32,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define MAX_NODESWITCHES	50
 
+//#define UPDATE_POLICY
+//#define COLLECT_SAMPLES
+
 void AI_Init(bot_state_t *bs);
 void AI_Shutdown(bot_state_t *bs);
 void AIEnter_Intermission(bot_state_t *bs, char *s);

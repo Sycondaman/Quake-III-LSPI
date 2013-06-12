@@ -68,9 +68,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //goal flag, see be_ai_goal.h for the other GFL_*
 #define GFL_AIR			128
 
-#define UPDATE_POLICY
-#define COLLECT_SAMPLES
-
 int numnodeswitches;
 char nodeswitch[MAX_NODESWITCHES+1][144];
 
