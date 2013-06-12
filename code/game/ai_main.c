@@ -1214,8 +1214,8 @@ int BotAISetupClient(int client, struct bot_settings_s *settings, qboolean resta
 	bs->walker = trap_Characteristic_BFloat(bs->character, CHARACTERISTIC_WALKER, 0, 1);
 	numbots++;
 	
-	// SET DA LSPI YAH MAN
-	if(client == 1)
+	// Only set the first bot to LSPI or Gradient.
+	if(numbots == 1)
 	{
 #ifdef LSPI_BOT
 		bs->bottype = 1;

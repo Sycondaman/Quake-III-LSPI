@@ -3043,7 +3043,7 @@ int BotFindEnemy(bot_state_t *bs, int curenemy) {
 			}
 		}
 		//found an enemy
-		if (curenemy >= 0 || (curenemy == -2 && bs->enemy != entinfo.number) 
+		if (curenemy >= 0 || (curenemy == -2 && bs->enemy != entinfo.number))
 		{
 			bs->enemysight_time = FloatTime() - 2;
 		}
