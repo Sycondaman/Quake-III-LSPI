@@ -2153,7 +2153,6 @@ int AINode_Seek_NBG(bot_state_t *bs) {
 	//if the bot has no goal
 	if (!trap_BotGetTopGoal(bs->gs, &goal)) 
 	{
-		// TODO: This is a bug, we should check BotNearbyGoal when we check for an action
 		if(bs->bottype)
 		{
 			AIEnter_Next(bs, "seek nbg: no goal found", LSPI_LTG);
@@ -2308,6 +2307,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		trap_BotGetTopGoal(bs->gs, &goal);
 		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
 		if(goal_found)
@@ -2538,6 +2538,7 @@ int AINode_Battle_Fight(bot_state_t *bs) {
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		trap_BotGetTopGoal(bs->gs, &goal);
 		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
 		if(goal_found)
@@ -2928,6 +2929,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		trap_BotGetTopGoal(bs->gs, &goal);
 		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
 		if(goal_found)
