@@ -200,7 +200,7 @@ int BotGoForAir(bot_state_t *bs, int tfl, bot_goal_t *ltg, float range) {
 		}
 		else {
 			//get a nearby goal outside the water
-			while(trap_BotChooseNBGItem(bs->gs, bs->origin, bs->inventory, tfl, ltg, range)) {
+			while(trap_BotChooseNBGItem(bs->gs, bs->origin, bs->inventory, tfl, ltg, range, 1)) {
 				trap_BotGetTopGoal(bs->gs, &goal);
 				//if the goal is not in water
 				if (!(trap_AAS_PointContents(goal.origin) & (CONTENTS_WATER|CONTENTS_SLIME|CONTENTS_LAVA))) {
@@ -219,7 +219,7 @@ int BotGoForAir(bot_state_t *bs, int tfl, bot_goal_t *ltg, float range) {
 BotNearbyGoal
 ==================
 */
-int BotNearbyGoal(bot_state_t *bs, int tfl, bot_goal_t *ltg, float range) {
+int BotNearbyGoal(bot_state_t *bs, int tfl, bot_goal_t *ltg, float range, int set_avoid) {
 	int ret;
 
 	//check if the bot should go for air
@@ -234,7 +234,7 @@ int BotNearbyGoal(bot_state_t *bs, int tfl, bot_goal_t *ltg, float range) {
 		}
 	}
 	//
-	ret = trap_BotChooseNBGItem(bs->gs, bs->origin, bs->inventory, tfl, ltg, range);
+	ret = trap_BotChooseNBGItem(bs->gs, bs->origin, bs->inventory, tfl, ltg, range, set_avoid);
 	/*
 	if (ret)
 	{
@@ -1207,7 +1207,7 @@ void UpdateBasis(bot_state_t *bs)
 	}
 
 	// First capture necessary information
-	if(!BotFindEnemy(bs, -2)) // -2 flags that we are checking without impacting state 
+	if(!BotFindEnemy(bs, -2))
 	{ 
 		bs->enemy = -1;
 	}
@@ -1306,7 +1306,7 @@ void UpdateBasis(bot_state_t *bs)
 	if(bs->bottype == 2)
 	{
 		QueryPerformanceCounter(&before);
-		LspiBot_GradUpdate(bs->client, basis[bs->client], last_basis[bs->client], last_action[bs->client]);
+		LspiBot_GradUpdate(bs->client, last_basis[bs->client], basis[bs->client], last_action[bs->client]);
 		QueryPerformanceCounter(&after);
 
 		policy_update_time[bs->client] += (double)(after.QuadPart - before.QuadPart)/frequency;
@@ -1356,14 +1356,14 @@ void SaveSample(bot_state_t *bs, int action)
 	fprintf(sample_file[bs->client], "%d,%d,%d,", l->current_area_num, l->goal_area_num, l->enemy_area_num);
 
 	// Misc
-	fprintf(sample_file[bs->client], "%d,", l->tfl);
+	fprintf(sample_file[bs->client], "%d,", l->tfl, l->last_hit_count);
 
 	/***** END WRITE LAST STATE *****/
 
 	/***** BEGIN WRITE STATE *****/
 
 	// For calculated reward
-	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,", b->kill_diff, b->death_diff, b->health_diff, b->armor_diff, b->last_hit_count);
+	fprintf(sample_file[bs->client], "%d,%d,%d,%d,%d,", b->kill_diff, b->death_diff, b->health_diff, b->armor_diff, b->hit_count_diff);
 
 	// Note, we don't save kills or deaths, since those are only for calculating diffs
 
@@ -1690,6 +1690,9 @@ int AINode_Respawn(bot_state_t *bs) {
 	// if waiting for the actual respawn
 	if (bs->respawn_wait) {
 		if (!BotIsDead(bs)) {
+			// HACK: Add the previous health and armor values to current to mimic losing health and armor when you die
+			basis[bs->client]->stat_health = bs->cur_ps.stats[STAT_HEALTH] + basis[bs->client]->stat_health;
+			basis[bs->client]->stat_armor = bs->cur_ps.stats[STAT_ARMOR] + basis[bs->client]->stat_armor;
 			AIEnter_Seek_LTG(bs, "respawn: respawned");
 		}
 		else {
@@ -2128,7 +2131,6 @@ int AINode_Seek_NBG(bot_state_t *bs) {
 				trap_BotEmptyGoalStack(bs->gs);
 				return qfalse;
 			default:
-				trap_BotPopGoal(bs->gs);
 				return qfalse;
 			}
 		}
@@ -2151,7 +2153,7 @@ int AINode_Seek_NBG(bot_state_t *bs) {
 	if (!trap_BotGetTopGoal(bs->gs, &goal)) 
 	{
 		// TODO: This is a bug, we should check BotNearbyGoal when we check for an action
-		if(bs->bottype && !BotNearbyGoal(bs, bs->tfl, &goal, 400))
+		if(bs->bottype)
 		{
 			AIEnter_Next(bs, "seek nbg: no goal found", LSPI_LTG);
 			return qfalse;
@@ -2277,7 +2279,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 	bot_goal_t goal;
 	vec3_t target, dir;
 	bot_moveresult_t moveresult;
-	int range;
+	int range, goal_found;
 	//char buf[128];
 	//bot_goal_t tmpgoal;
 
@@ -2305,7 +2307,12 @@ int AINode_Seek_LTG(bot_state_t *bs)
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
+		if(goal_found)
+		{
+			trap_BotPopGoal(bs->gs);
+		}
 	#ifdef COLLECT_SAMPLES
 		SaveSample(bs, last_action[bs->client]);
 	#endif
@@ -2317,7 +2324,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 			case LSPI_LTG:
 				break;
 			case LSPI_NBG:
-				trap_BotResetLastAvoidReach(bs->ms);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
 				return qfalse;
 			case LSPI_FIGHT:
 				trap_BotResetLastAvoidReach(bs->ms);
@@ -2406,7 +2413,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 		//
 		if(!bs->bottype)
 		{
-			if (BotNearbyGoal(bs, bs->tfl, &goal, range)) {
+			if (BotNearbyGoal(bs, bs->tfl, &goal, range, 1)) {
 				trap_BotResetLastAvoidReach(bs->ms);
 				//get the goal at the top of the stack
 				//trap_BotGetTopGoal(bs->gs, &tmpgoal);
@@ -2505,7 +2512,8 @@ AINode_Battle_Fight
 ==================
 */
 int AINode_Battle_Fight(bot_state_t *bs) {
-	int areanum;
+	bot_goal_t goal;
+	int areanum, goal_found;
 	vec3_t target;
 	aas_entityinfo_t entinfo;
 	bot_moveresult_t moveresult;
@@ -2529,7 +2537,12 @@ int AINode_Battle_Fight(bot_state_t *bs) {
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
+		if(goal_found)
+		{
+			trap_BotPopGoal(bs->gs);
+		}
 	#ifdef COLLECT_SAMPLES
 		SaveSample(bs, last_action[bs->client]);
 	#endif
@@ -2538,6 +2551,9 @@ int AINode_Battle_Fight(bot_state_t *bs) {
 		{
 			switch(AIEnter_Next(bs, "lspi: finding current action", -1))
 			{
+			case LSPI_BATTLE_NBG:
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
+				return qfalse;
 			case LSPI_FIGHT:
 				break;
 			default:
@@ -2709,6 +2725,7 @@ int AINode_Battle_Chase(bot_state_t *bs)
 	vec3_t target, dir;
 	bot_moveresult_t moveresult;
 	float range;
+	int goal_found;
 
 	if (BotIsObserver(bs)) {
 		AIEnter_Observer(bs, "battle chase: observer");
@@ -2735,7 +2752,12 @@ int AINode_Battle_Chase(bot_state_t *bs)
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
+		if(goal_found)
+		{
+			trap_BotPopGoal(bs->gs);
+		}
 	#ifdef COLLECT_SAMPLES
 		SaveSample(bs, last_action[bs->client]);
 	#endif
@@ -2748,6 +2770,7 @@ int AINode_Battle_Chase(bot_state_t *bs)
 				break;
 			case LSPI_BATTLE_NBG:
 				trap_BotResetLastAvoidReach(bs->ms);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
 				return qfalse;
 			default:
 				return qfalse;
@@ -2803,7 +2826,7 @@ int AINode_Battle_Chase(bot_state_t *bs)
 			bs->check_time = FloatTime() + 1;
 			range = 150;
 			//
-			if (BotNearbyGoal(bs, bs->tfl, &goal, range)) {
+			if (BotNearbyGoal(bs, bs->tfl, &goal, range, 1)) {
 				//the bot gets 5 seconds to pick up the nearby goal item
 				bs->nbg_time = FloatTime() + 0.1 * range + 1;
 				trap_BotResetLastAvoidReach(bs->ms);
@@ -2884,7 +2907,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 	bot_moveresult_t moveresult;
 	vec3_t target, dir;
 	float attack_skill, range;
-	int areanum;
+	int areanum, goal_found;
 
 	if (BotIsObserver(bs)) {
 		AIEnter_Observer(bs, "battle retreat: observer");
@@ -2904,7 +2927,12 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 	if(action_chosen[bs->client] < 0)
 	{
 		action_chosen[bs->client] = 1;
+		goal_found = BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 		UpdateBasis(bs);
+		if(goal_found)
+		{
+			trap_BotPopGoal(bs->gs);
+		}
 	#ifdef COLLECT_SAMPLES
 		SaveSample(bs, last_action[bs->client]);
 	#endif
@@ -2920,6 +2948,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 				return qfalse;
 			case LSPI_BATTLE_NBG:
 				trap_BotResetLastAvoidReach(bs->ms);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
 				return qfalse;
 			default:
 				return qfalse;
@@ -3036,7 +3065,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 			}
 	#endif
 			//
-			if (BotNearbyGoal(bs, bs->tfl, &goal, range)) {
+			if (BotNearbyGoal(bs, bs->tfl, &goal, range, 1)) {
 				trap_BotResetLastAvoidReach(bs->ms);
 				//time the bot gets to pick up the nearby goal item
 				bs->nbg_time = FloatTime() + range / 100 + 1;
@@ -3204,7 +3233,7 @@ int AINode_Battle_NBG(bot_state_t *bs) {
 	//if the bot has no goal or touches the current goal
 	if (!trap_BotGetTopGoal(bs->gs, &goal)) 
 	{
-		if(bs->bottype && !BotNearbyGoal(bs, bs->tfl, &goal, 400))
+		if(bs->bottype)
 		{
 			AIEnter_Next(bs, "seek nbg: no goal found", LSPI_FIGHT);
 			return qfalse;
