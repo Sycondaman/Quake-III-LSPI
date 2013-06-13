@@ -2131,6 +2131,7 @@ int AINode_Seek_NBG(bot_state_t *bs) {
 				trap_BotEmptyGoalStack(bs->gs);
 				return qfalse;
 			default:
+				trap_BotPopGoal(bs->gs);
 				return qfalse;
 			}
 		}
