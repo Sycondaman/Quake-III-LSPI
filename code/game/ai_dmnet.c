@@ -306,7 +306,7 @@ int BotReachedGoal(bot_state_t *bs, bot_goal_t *goal) {
 BotGetItemLongTermGoal
 ==================
 */
-int BotGetItemLongTermGoal(bot_state_t *bs, int tfl, bot_goal_t *goal) {
+int BotGetItemLongTermGoal(bot_state_t *bs, int tfl, bot_goal_t *goal, int set_avoid) {
 	//if the bot has no goal
 	if (!trap_BotGetTopGoal(bs->gs, goal)) {
 		//BotAI_Print(PRT_MESSAGE, "no ltg on stack\n");
@@ -324,7 +324,7 @@ int BotGetItemLongTermGoal(bot_state_t *bs, int tfl, bot_goal_t *goal) {
 		//BotAI_Print(PRT_MESSAGE, "%s: choosing new ltg\n", ClientName(bs->client, netname, sizeof(netname)));
 		//choose a new goal
 		//BotAI_Print(PRT_MESSAGE, "%6.1f client %d: BotChooseLTGItem\n", FloatTime(), bs->client);
-		if (trap_BotChooseLTGItem(bs->gs, bs->origin, bs->inventory, tfl)) {
+		if (trap_BotChooseLTGItem(bs->gs, bs->origin, bs->inventory, tfl, set_avoid)) {
 			/*
 			char buf[128];
 			//get the goal at the top of the stack
@@ -360,7 +360,7 @@ we could also create a seperate AI node for every long term goal type
 however this saves us a lot of code
 ==================
 */
-int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) {
+int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal, int set_avoid) {
 	vec3_t target, dir, dir2;
 	char netname[MAX_NETNAME];
 	char buf[MAX_MESSAGE_SIZE];
@@ -612,7 +612,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
 			bs->ltgtype = 0;
 		}
 		//just roam around
-		return BotGetItemLongTermGoal(bs, tfl, goal);
+		return BotGetItemLongTermGoal(bs, tfl, goal, set_avoid);
 	}
 	//get an item
 	if (bs->ltgtype == LTG_GETITEM && !retreat) {
@@ -1062,7 +1062,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
 	}
 #endif
 	//normal goal stuff
-	return BotGetItemLongTermGoal(bs, tfl, goal);
+	return BotGetItemLongTermGoal(bs, tfl, goal, set_avoid);
 }
 
 /*
@@ -1070,7 +1070,7 @@ int BotGetLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) 
 BotLongTermGoal
 ==================
 */
-int BotLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) {
+int BotLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal, int set_avoid) {
 	aas_entityinfo_t entinfo;
 	char teammate[MAX_MESSAGE_SIZE];
 	float squaredist;
@@ -1085,7 +1085,7 @@ int BotLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) {
 			BotAI_BotInitialChat(bs, "lead_stop", EasyClientName(bs->lead_teammate, teammate, sizeof(teammate)), NULL);
 			trap_BotEnterChat(bs->cs, bs->teammate, CHAT_TELL);
 			bs->lead_time = 0;
-			return BotGetLongTermGoal(bs, tfl, retreat, goal);
+			return BotGetLongTermGoal(bs, tfl, retreat, goal, set_avoid);
 		}
 		//
 		if (bs->leadmessage_time < 0 && -bs->leadmessage_time < FloatTime()) {
@@ -1150,7 +1150,7 @@ int BotLongTermGoal(bot_state_t *bs, int tfl, int retreat, bot_goal_t *goal) {
 			}
 		}
 	}
-	return BotGetLongTermGoal(bs, tfl, retreat, goal);
+	return BotGetLongTermGoal(bs, tfl, retreat, goal, set_avoid);
 }
 
 /*
@@ -1520,27 +1520,45 @@ int AIEnter_Next(bot_state_t *bs, char *s, int act)
 	{
 	case LSPI_NBG:
 		AIEnter_Seek_NBG(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Seek_NBG.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Seek_NBG.\n");
+		}
 		break;
 	case LSPI_FIGHT:
 		AIEnter_Battle_Fight(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Battle_Fight.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Battle_Fight.\n");
+		}
 		break;
 	case LSPI_CHASE:
 		AIEnter_Battle_Chase(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Battle_Chase.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Battle_Chase.\n");
+		}
 		break;
 	case LSPI_RETREAT:
 		AIEnter_Battle_Retreat(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Battle_Retreat.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Battle_Retreat.\n");
+		}
 		break;
 	case LSPI_BATTLE_NBG:
 		AIEnter_Battle_NBG(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Battle_NBG.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Battle_NBG.\n");
+		}
 		break;
 	case LSPI_LTG:
 		AIEnter_Seek_LTG(bs, s);
-		//BotAI_Print(PRT_MESSAGE, "Seek_LTG.");
+		if(last_action[bs->client] != action)
+		{
+			//BotAI_Print(PRT_MESSAGE, "Seek_LTG.\n");
+		}
 		break;
 	default:
 		BotAI_Print(PRT_ERROR, "GetAction returned an invalid result.");
@@ -2279,9 +2297,18 @@ int AINode_Seek_LTG(bot_state_t *bs)
 	bot_goal_t goal;
 	vec3_t target, dir;
 	bot_moveresult_t moveresult;
-	int range, goal_found;
+	int range, goal_found, set_avoid;
 	//char buf[128];
 	//bot_goal_t tmpgoal;
+
+	if(bs->bottype)
+	{
+		set_avoid = 0;
+	}
+	else
+	{
+		set_avoid = 1;
+	}
 
 	if (BotIsObserver(bs)) {
 		AIEnter_Observer(bs, "seek ltg: observer");
@@ -2325,7 +2352,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 			case LSPI_LTG:
 				break;
 			case LSPI_NBG:
-				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 				return qfalse;
 			case LSPI_FIGHT:
 				trap_BotResetLastAvoidReach(bs->ms);
@@ -2380,7 +2407,7 @@ int AINode_Seek_LTG(bot_state_t *bs)
 	//
 	BotTeamGoals(bs, qfalse);
 	//get the current long term goal
-	if (!BotLongTermGoal(bs, bs->tfl, qfalse, &goal)) {
+	if (!BotLongTermGoal(bs, bs->tfl, qfalse, &goal, set_avoid)) {
 		action_chosen[bs->client] = -1;
 		last_action[bs->client] = LSPI_LTG;
 		return qtrue;
@@ -2554,7 +2581,7 @@ int AINode_Battle_Fight(bot_state_t *bs) {
 			switch(AIEnter_Next(bs, "lspi: finding current action", -1))
 			{
 			case LSPI_BATTLE_NBG:
-				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 				return qfalse;
 			case LSPI_FIGHT:
 				break;
@@ -2772,7 +2799,7 @@ int AINode_Battle_Chase(bot_state_t *bs)
 				break;
 			case LSPI_BATTLE_NBG:
 				trap_BotResetLastAvoidReach(bs->ms);
-				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 				return qfalse;
 			default:
 				return qfalse;
@@ -2909,7 +2936,16 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 	bot_moveresult_t moveresult;
 	vec3_t target, dir;
 	float attack_skill, range;
-	int areanum, goal_found;
+	int areanum, goal_found, set_avoid;
+
+	if(bs->bottype)
+	{
+		set_avoid = 0;
+	}
+	else
+	{
+		set_avoid = 1;
+	}
 
 	if (BotIsObserver(bs)) {
 		AIEnter_Observer(bs, "battle retreat: observer");
@@ -2951,7 +2987,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 				return qfalse;
 			case LSPI_BATTLE_NBG:
 				trap_BotResetLastAvoidReach(bs->ms);
-				BotNearbyGoal(bs, bs->tfl, &goal, 400, 1);
+				BotNearbyGoal(bs, bs->tfl, &goal, 400, 0);
 				return qfalse;
 			default:
 				return qfalse;
@@ -3040,7 +3076,7 @@ int AINode_Battle_Retreat(bot_state_t *bs) {
 	//use holdable items
 	BotBattleUseItems(bs);
 	//get the current long term goal while retreating
-	if (!BotLongTermGoal(bs, bs->tfl, qtrue, &goal)) {
+	if (!BotLongTermGoal(bs, bs->tfl, qtrue, &goal, set_avoid)) {
 		AIEnter_Battle_SuicidalFight(bs, "battle retreat: no way out");
 		return qfalse;
 	}

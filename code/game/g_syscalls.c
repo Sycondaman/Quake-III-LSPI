@@ -623,8 +623,8 @@ int trap_BotGetSecondGoal(int goalstate, void /* struct bot_goal_s */ *goal) {
 	return syscall( BOTLIB_AI_GET_SECOND_GOAL, goalstate, goal );
 }
 
-int trap_BotChooseLTGItem(int goalstate, vec3_t origin, int *inventory, int travelflags) {
-	return syscall( BOTLIB_AI_CHOOSE_LTG_ITEM, goalstate, origin, inventory, travelflags );
+int trap_BotChooseLTGItem(int goalstate, vec3_t origin, int *inventory, int travelflags, int set_avoid) {
+	return syscall( BOTLIB_AI_CHOOSE_LTG_ITEM, goalstate, origin, inventory, travelflags, set_avoid );
 }
 
 int trap_BotChooseNBGItem(int goalstate, vec3_t origin, int *inventory, int travelflags, void /* struct bot_goal_s */ *ltg, float maxtime, int set_avoid) {

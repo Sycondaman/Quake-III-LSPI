@@ -346,7 +346,7 @@ typedef struct ai_export_s
 	void	(*BotGoalName)(int number, char *name, int size);
 	int		(*BotGetTopGoal)(int goalstate, struct bot_goal_s *goal);
 	int		(*BotGetSecondGoal)(int goalstate, struct bot_goal_s *goal);
-	int		(*BotChooseLTGItem)(int goalstate, vec3_t origin, int *inventory, int travelflags);
+	int		(*BotChooseLTGItem)(int goalstate, vec3_t origin, int *inventory, int travelflags, int set_avoid);
 	int		(*BotChooseNBGItem)(int goalstate, vec3_t origin, int *inventory, int travelflags,
 								struct bot_goal_s *ltg, float maxtime, int set_avoid);
 	int		(*BotTouchingGoal)(vec3_t origin, struct bot_goal_s *goal);

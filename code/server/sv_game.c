@@ -724,7 +724,7 @@ int SV_GameSystemCalls( int *args ) {
 	case BOTLIB_AI_GET_SECOND_GOAL:
 		return botlib_export->ai.BotGetSecondGoal( args[1], VMA(2) );
 	case BOTLIB_AI_CHOOSE_LTG_ITEM:
-		return botlib_export->ai.BotChooseLTGItem( args[1], VMA(2), VMA(3), args[4] );
+		return botlib_export->ai.BotChooseLTGItem( args[1], VMA(2), VMA(3), args[4], args[5] );
 	case BOTLIB_AI_CHOOSE_NBG_ITEM:
 		return botlib_export->ai.BotChooseNBGItem( args[1], VMA(2), VMA(3), args[4], VMA(5), VMF(6), args[7] );
 	case BOTLIB_AI_TOUCHING_GOAL:

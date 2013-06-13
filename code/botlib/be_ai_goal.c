@@ -1281,7 +1281,7 @@ int BotGetSecondGoal(int goalstate, bot_goal_t *goal)
 // Returns:					-
 // Changes Globals:		-
 //===========================================================================
-int BotChooseLTGItem(int goalstate, vec3_t origin, int *inventory, int travelflags)
+int BotChooseLTGItem(int goalstate, vec3_t origin, int *inventory, int travelflags, int set_avoid)
 {
 	int areanum, t, weightnum;
 	float weight, bestweight, avoidtime;
@@ -1436,7 +1436,10 @@ int BotChooseLTGItem(int goalstate, vec3_t origin, int *inventory, int travelfla
 			avoidtime = AVOID_MINIMUM_TIME;
 	} //end else
 	//add the chosen goal to the goals to avoid for a while
-	BotAddToAvoidGoals(gs, bestitem->number, avoidtime);
+	if(set_avoid)
+	{
+		BotAddToAvoidGoals(gs, bestitem->number, avoidtime);
+	}
 	//push the goal on the stack
 	BotPushGoal(goalstate, &goal);
 	//
