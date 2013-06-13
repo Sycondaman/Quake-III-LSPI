@@ -1356,7 +1356,7 @@ void SaveSample(bot_state_t *bs, int action)
 	fprintf(sample_file[bs->client], "%d,%d,%d,", l->current_area_num, l->goal_area_num, l->enemy_area_num);
 
 	// Misc
-	fprintf(sample_file[bs->client], "%d,", l->tfl, l->last_hit_count);
+	fprintf(sample_file[bs->client], "%d,%d,", l->tfl, l->last_hit_count);
 
 	/***** END WRITE LAST STATE *****/
 

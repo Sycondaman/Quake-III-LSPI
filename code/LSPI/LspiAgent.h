@@ -47,7 +47,7 @@ template <typename vector_type>
 class LspiAgent
 {
 	public:
-		LspiAgent(thrust::host_vector<float> policy, float disc, bool exp, float rate) : w(policy), discount(disc) explore(exp), exp_rate(e_rate) {}
+		LspiAgent(thrust::host_vector<float> policy, float disc, bool exp, float rate) : w(policy), discount(disc), explore(exp), exp_rate(rate) {}
 
 		/**
 		 * To create an LSPI Agent, a discount factor and a large number of sample data points are required. More sample should result in a better policy.
