@@ -478,7 +478,12 @@ void LspiBot_Update(int client, const char *fname)
 	}
 	file.close();
 
-	device_vector<float> policy = agents[client]->updatePolicy(samples);
+#ifdef CPU
+	host_vector<float> policy = agents[client]->updatePolicy(samples);
+#else
+	device_vector<sample> dev_samples = samples;
+	host_vector<float> policy = agents[client]->updatePolicy(dev_samples);
+#endif
 
 	// Write to file
 	ofstream outfile("lspi.pol");

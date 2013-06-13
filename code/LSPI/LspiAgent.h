@@ -62,7 +62,11 @@ class LspiAgent
 		 * -v' is the angular velocity after executing the action
 		 * -t is 1 if the state after executing is terminal, 0 otherwise
 		 */
+#ifdef CPU
 		thrust::host_vector<float> updatePolicy(thrust::host_vector<sample> samples)
+#else
+		thrust::host_vector<float> updatePolicy(thrust::device_vector<sample> samples)
+#endif
 		{
 			// Loop until policy converges
 			vector_type policy = lstdq(samples);
