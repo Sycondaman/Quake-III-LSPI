@@ -72,6 +72,12 @@ void LspiBot_Init(int client)
 	cublasStatus_t stat = cublasCreate(&blas::handle);
 #endif
 
+#ifdef EXPLORE
+	bool explore = true;
+#else
+	bool explore = false;
+#endif
+
 #ifdef GRADIENT
 	#ifdef CPU
 		agents[client] = new GradientAgent<host_vector<float>>(policy, 0.01, 0.80);
@@ -80,9 +86,9 @@ void LspiBot_Init(int client)
 	#endif
 #else
 	#ifdef CPU
-		agents[client] = new LspiAgent<host_vector<float>>(policy, 0.95);
+		agents[client] = new LspiAgent<host_vector<float>>(policy, 0.95, explore, EXP_RATE);
 	#else
-		agents[client] = new LspiAgent<device_vector<float>>(policy, 0.95);
+		agents[client] = new LspiAgent<device_vector<float>>(policy, 0.95, explore, EXP_RATE);
 	#endif
 #endif
 }

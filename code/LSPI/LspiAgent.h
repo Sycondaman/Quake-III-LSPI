@@ -22,9 +22,6 @@
 #define BASIS_SIZE 5
 #define SIGMA_2 1
 
-//#define EXPLORE
-#define EXP_RATE 0.25f
-
 //#define VERBOSE_HIGH
 //#define VERBOSE_MED
 //#define VERBOSE_LOW
@@ -50,7 +47,7 @@ template <typename vector_type>
 class LspiAgent
 {
 	public:
-		LspiAgent(thrust::host_vector<float> policy, float disc) : w(policy), discount(disc) {}
+		LspiAgent(thrust::host_vector<float> policy, float disc, bool exp, float rate) : w(policy), discount(disc) explore(exp), exp_rate(e_rate) {}
 
 		/**
 		 * To create an LSPI Agent, a discount factor and a large number of sample data points are required. More sample should result in a better policy.
@@ -131,19 +128,20 @@ class LspiAgent
 
 			if(state->enemy == -1)
 			{
-#ifdef EXPLORE
-				if((float)rand()/RAND_MAX < EXP_RATE)
+				if(explore)
 				{
-					if((float)rand()/RAND_MAX < 0.50)
+					if((float)rand()/RAND_MAX < exp_rate)
 					{
-						return 1;
-					}
-					else
-					{
-						return 2;
+						if((float)rand()/RAND_MAX < 0.50)
+						{
+							return 1;
+						}
+						else
+						{
+							return 2;
+						}
 					}
 				}
-#endif
 
 				// Only #1 and #2 are valid options
 				i = 1;
@@ -151,25 +149,26 @@ class LspiAgent
 			}
 			else
 			{
-#ifdef EXPLORE
-				if((float)rand()/RAND_MAX < EXP_RATE)
+				if(explore)
 				{
-					float select = (float)rand()/RAND_MAX;
-					if(select < 0.25)
+					if((float)rand()/RAND_MAX < exp_rate)
 					{
-						return 3;
+						float select = (float)rand()/RAND_MAX;
+						if(select < 0.25)
+						{
+							return 3;
+						}
+						else if(select < 0.50)
+						{
+							return 4;
+						}
+						else if(select < 0.75)
+						{
+							return 5;
+						}
+						return 6;
 					}
-					else if(select < 0.50)
-					{
-						return 4;
-					}
-					else if(select < 0.75)
-					{
-						return 5;
-					}
-					return 6;
 				}
-#endif
 				// #3, 4, 5, 6 are valid
 				i = 3;
 				j = 7;
@@ -206,7 +205,8 @@ class LspiAgent
 		}
 
 	private:
-		float discount;
+		float discount, exp_rate;
+		bool explore;
 		vector_type w;
 		
 		// TODO: Test the speed penalty of copying samples to the GPU for gpu based implementation
