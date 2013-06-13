@@ -5,7 +5,7 @@
 
 //#define CPU
 //#define GRADIENT
-#define EXPLORE
+//#define EXPLORE
 #define EXP_RATE 0.25f
 
 #define LSPI_NBG 1
