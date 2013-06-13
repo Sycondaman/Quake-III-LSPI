@@ -2185,6 +2185,7 @@ int AINode_Seek_NBG(bot_state_t *bs) {
 		bs->nbg_time = 0;
 		if(bs->bottype)
 		{
+			trap_BotSetAvoidGoalTime(bs->gs, goal.number, -1);
 			trap_BotPopGoal(bs->gs);
 		}
 	}
@@ -2411,6 +2412,10 @@ int AINode_Seek_LTG(bot_state_t *bs)
 		action_chosen[bs->client] = -1;
 		last_action[bs->client] = LSPI_LTG;
 		return qtrue;
+	}
+	else if(bs->bottype && BotReachedGoal(bs, &goal))
+	{
+		trap_BotSetAvoidGoalTime(bs->gs, goal.number, -1);
 	}
 	//check for nearby goals periodicly
 	if (bs->check_time < FloatTime()) {
@@ -3286,6 +3291,7 @@ int AINode_Battle_NBG(bot_state_t *bs) {
 		bs->nbg_time = 0;
 		if(bs->bottype)
 		{
+			trap_BotSetAvoidGoalTime(bs->gs, goal.number, -1);
 			trap_BotPopGoal(bs->gs);
 		}
 	}
