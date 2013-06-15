@@ -19,7 +19,7 @@
 #include <Windows.h>
 
 #define NUM_ACTIONS 6
-#define BASIS_SIZE 5
+#define BASIS_SIZE 29
 #define SIGMA_2 1
 
 //#define VERBOSE_HIGH
@@ -342,10 +342,76 @@ class LspiAgent
 			int i = BASIS_SIZE * (action-1);
 			phi[i] = 1.0f;
 			
-			phi[i+1] = state->stat_health;
-			phi[i+2] = state->stat_armor;
-			phi[i+3] = state->enemy;
-			phi[i+4] = state->enemy_line_dist;
+			// Health
+			float over_health = state->stat_health - state->stat_max_health;
+			if(over_health >= 0)
+			{
+				phi[i+1] = over_health;
+				phi[i+2] = 1; // Max health
+			}
+			else
+			{
+				float percent_health = (float)state->stat_health/state->stat_max_health;
+				if(percent_health < 0.20)
+				{
+					phi[i+3] = 1; // Critical health
+				}
+				else if(percent_health < 0.50)
+				{
+					phi[i+4] = 1;
+				}
+				else
+				{
+					phi[i+5] = 1;
+				}
+			}
+
+			// Armor
+			float over_armor = state->stat_armor - 100;
+			if(over_armor >= 0)
+			{
+				phi[i+6] = over_armor;
+				phi[i+7] = 1.0;
+			}
+			else
+			{
+				float percent_armor = (float)state->stat_armor/100.0f;
+				phi[i+8] = percent_armor;
+			}
+
+			// Powerups
+			phi[i+9] = state->pw_quad;
+			phi[i+10] = state->pw_battlesuit;
+			phi[i+11] = state->pw_haste;
+			phi[i+12] = state->pw_invis;
+			phi[i+13] = state->pw_regen;
+			phi[i+14] = state->pw_flight;
+			phi[i+15] = state->pw_scout;
+			phi[i+16] = state->pw_guard;
+			phi[i+17] = state->pw_doubler;
+			phi[i+18] = state->pw_ammoregen;
+			phi[i+19] = state->pw_invulnerability;
+
+			// enemy
+			phi[i+20] = state->enemy;
+			if(state->enemy_line_dist < 500)
+			{
+				phi[i+21] = 1;
+			}
+			else if(state->enemy_line_dist > 1500)
+			{
+				phi[i+22] = 1;
+			}
+			else
+			{
+				phi[i+23] = 1;
+			}
+			phi[i+24] = state->enemy_is_invisible;
+			phi[i+25] = state->enemy_is_shooting;
+
+			phi[i+26] = state->enemy_area_num;
+			phi[i+27] = state->current_area_num;
+			phi[i+28] = state->goal_area_num;
 
 #if defined(VERBOSE_HIGH)
 			PRINT(phi);
@@ -353,5 +419,34 @@ class LspiAgent
 
 			return phi;
 		}
+
+
+/// SMALL BASIS FUNCTION (6*5)
+//		vector_type basis_function(lspi_action_basis_t *state, int action)
+//		{
+//			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
+//			thrust::fill(phi.begin(), phi.end(), 0.0f);
+//			
+//#if defined(VERBOSE_HIGH)
+//			PRINT(phi);
+//#endif
+//
+//			// TODO: Move this into a transform/cuda kernel
+//			// Now populate the basis function for this state action pair
+//			// Note that each entry except for the first is a gaussian.
+//			int i = BASIS_SIZE * (action-1);
+//			phi[i] = 1.0f;
+//			
+//			phi[i+1] = state->stat_health;
+//			phi[i+2] = state->stat_armor;
+//			phi[i+3] = state->enemy;
+//			phi[i+4] = state->enemy_line_dist;
+//
+//#if defined(VERBOSE_HIGH)
+//			PRINT(phi);
+//#endif
+//
+//			return phi;
+//		}
 };
 
