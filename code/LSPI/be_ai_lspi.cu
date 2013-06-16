@@ -4,7 +4,7 @@
 #include <fstream>
 #include <string>
 #include "LspiAgent.h"
-//#include "GradientAgent.h"
+#include "GradientAgent.h"
 #include <thrust/generate.h>
 #include <sys/stat.h>
 #include <iomanip>

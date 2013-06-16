@@ -19,8 +19,6 @@
 #include <stdlib.h>
 #include <cmath>
 
-#define NUM_ACTIONS 6
-#define BASIS_SIZE 5
 #define SIGMA_2 1
 #define E_CONST 2.71828f
 

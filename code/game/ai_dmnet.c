@@ -1303,7 +1303,7 @@ void UpdateBasis(bot_state_t *bs)
 	total_actions[bs->client] += 1;
 	fprintf(reward_file[bs->client], "%d,%f,%f\n", total_actions[bs->client], reward, total_reward[bs->client]);
 
-	if(bs->bottype == 2)
+	if(bs->bottype == 2 && last_action[bs->client] > 0)
 	{
 		QueryPerformanceCounter(&before);
 		LspiBot_GradUpdate(bs->client, last_basis[bs->client], basis[bs->client], last_action[bs->client]);
