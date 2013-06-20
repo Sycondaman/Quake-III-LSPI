@@ -34,6 +34,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 //#define UPDATE_POLICY
 //#define COLLECT_SAMPLES
+#define ONLINE_UPDATE
+#define MAX_UPDATES 100000
 
 void AI_Init(bot_state_t *bs);
 void AI_Shutdown(bot_state_t *bs);

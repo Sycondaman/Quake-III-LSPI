@@ -19,7 +19,7 @@
 #include <Windows.h>
 
 #define NUM_ACTIONS 6
-#define BASIS_SIZE 36
+#define BASIS_SIZE 5
 #define SIGMA_2 1
 
 //#define VERBOSE_HIGH
@@ -47,7 +47,7 @@ template <typename vector_type>
 class LspiAgent
 {
 	public:
-		LspiAgent(thrust::host_vector<float> policy, float disc, bool exp, float rate) : w(policy), discount(disc), explore(exp), exp_rate(rate) {}
+		LspiAgent(thrust::host_vector<float> policy, float disc, bool exp, float rate) : w(policy), discount(disc), explore(exp), exp_rate(rate) { }
 
 		/**
 		 * To create an LSPI Agent, a discount factor and a large number of sample data points are required. More sample should result in a better policy.
@@ -70,6 +70,7 @@ class LspiAgent
 		{
 			// Loop until policy converges
 			vector_type policy = lstdq(samples);
+			vector_type w_copy(w);
 #if defined(VERBOSE_HIGH)
 			PRINT(policy);
 #endif
@@ -77,7 +78,7 @@ class LspiAgent
 #if defined(VERBOSE_HIGH)
 			PRINT(w);
 #endif
-			blas::axpy(w, temp, -1.0f);
+			blas::axpy(w_copy, temp, -1.0f);
 #if defined(VERBOSE_HIGH)
 			PRINT(temp);
 #endif
@@ -93,14 +94,14 @@ class LspiAgent
 			int k = 0;
 			while(sqrt(magnitude) > epsilon_const && k < 10)
 			{
-				w = policy;
+				w_copy = policy;
 #if defined(VERBOSE_LOW)
 				PRINT(w);
 #endif
 				policy = lstdq(samples);
 
 				vector_type temp2(policy);
-				blas::axpy(w, temp2, -1.0f);
+				blas::axpy(w_copy, temp2, -1.0f);
 				//TODO: Write a magnitude function dammit!
 				magnitude = 0.0f;
 				for(int i = 0; i < temp2.size(); i++)
@@ -113,8 +114,10 @@ class LspiAgent
 #if defined(VERBOSE_LOW)
 			PRINT(policy);
 #endif
-
+			WaitForSingleObject(updateMutex, INFINITE);
 			w = policy;
+			ReleaseMutex(updateMutex);
+			
 
 			thrust::host_vector<float> rval(w);
 			return rval;
@@ -178,6 +181,7 @@ class LspiAgent
 				j = 7;
 			}
 			
+			WaitForSingleObject(updateMutex, INFINITE);
 			for(i; i < j; i++)
 			{
 				vector_type params = basis_function(state, i);
@@ -189,6 +193,7 @@ class LspiAgent
 					max = q;
 				}
 			}
+			ReleaseMutex(updateMutex);
 
 			return action;
 		}
@@ -211,6 +216,7 @@ class LspiAgent
 		float discount, exp_rate;
 		bool explore;
 		vector_type w;
+		HANDLE updateMutex;
 		
 		// TODO: Test the speed penalty of copying samples to the GPU for gpu based implementation
 		/**
@@ -232,14 +238,14 @@ class LspiAgent
 			}
 
 			scal(B.vector, 0.1f); // TODO: Investigate the importance and effect of this number
-			
+
+			vector_type b(BASIS_SIZE*NUM_ACTIONS);
+			thrust::fill(b.begin(), b.end(), 0.0f);
+
 #if defined(VERBOSE_HIGH)
 			printf("\n");
 			B.print();
 #endif
-
-			vector_type b(BASIS_SIZE*NUM_ACTIONS);
-			thrust::fill(b.begin(), b.end(), 0.0f);
 
 			for(unsigned int i = 0; i < samples.size(); i++)
 			{
@@ -439,106 +445,106 @@ class LspiAgent
 //		}
 
 // Med-LARGE BASIS FUNCIONT (6*36)
-		vector_type basis_function(lspi_action_basis_t *state, int action)
-		{
-			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
-			thrust::fill(phi.begin(), phi.end(), 0.0f);
-			
-#if defined(VERBOSE_HIGH)
-			PRINT(phi);
-#endif
-
-			// TODO: Move this into a transform/cuda kernel
-			// Now populate the basis function for this state action pair
-			// Note that each entry except for the first is a gaussian.
-			int i = BASIS_SIZE * (action-1);
-			phi[i] = 1.0f;
-			
-			// Health
-			float over_health = state->stat_health - state->stat_max_health;
-			if(over_health >= 0)
-			{
-				phi[i+1] = over_health;
-				phi[i+2] = 1; // Max health
-			}
-			else
-			{
-				float percent_health = (float)state->stat_health/state->stat_max_health;
-				if(percent_health < 0.20)
-				{
-					phi[i+3] = 1; // Critical health
-				}
-				else if(percent_health < 0.50)
-				{
-					phi[i+4] = 1;
-				}
-				else
-				{
-					phi[i+5] = 1;
-				}
-			}
-
-			// Armor
-			float over_armor = state->stat_armor - 100;
-			if(over_armor >= 0)
-			{
-				phi[i+6] = over_armor;
-				phi[i+7] = 1.0;
-			}
-			else
-			{
-				float percent_armor = (float)state->stat_armor/100.0f;
-				phi[i+8] = percent_armor;
-			}
-
-			// Powerups
-			phi[i+9] = state->pw_quad;
-			phi[i+10] = state->pw_battlesuit;
-			phi[i+11] = state->pw_haste;
-			phi[i+12] = state->pw_invis;
-			phi[i+13] = state->pw_regen;
-			phi[i+14] = state->pw_flight;
-			phi[i+15] = state->pw_scout;
-			phi[i+16] = state->pw_guard;
-			phi[i+17] = state->pw_doubler;
-			phi[i+18] = state->pw_ammoregen;
-			phi[i+19] = state->pw_invulnerability;
-
-			// enemy
-			phi[i+20] = state->enemy;
-			if(state->enemy_line_dist < 500)
-			{
-				phi[i+21] = 1;
-			}
-			else if(state->enemy_line_dist > 1500)
-			{
-				phi[i+22] = 1;
-			}
-			else
-			{
-				phi[i+23] = 1;
-			}
-			phi[i+24] = state->enemy_is_invisible;
-			phi[i+25] = state->enemy_is_shooting;
-
-			// Ammo information
-			phi[i+26] = state->wp_gauntlet;
-			phi[i+27] = state->wp_machinegun;
-			phi[i+28] = state->wp_shotgun;
-			phi[i+29] = state->wp_grenade_launcher;
-			phi[i+30] = state->wp_rocket_launcher;
-			phi[i+31] = state->wp_lightning;
-			phi[i+32] = state->wp_railgun;
-			phi[i+33] = state->wp_plasmagun;
-			phi[i+34] = state->wp_bfg;
-			phi[i+35] = state->wp_grappling_hook;
-
-#if defined(VERBOSE_HIGH)
-			PRINT(phi);
-#endif
-
-			return phi;
-		}
+//		vector_type basis_function(lspi_action_basis_t *state, int action)
+//		{
+//			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
+//			thrust::fill(phi.begin(), phi.end(), 0.0f);
+//			
+//#if defined(VERBOSE_HIGH)
+//			PRINT(phi);
+//#endif
+//
+//			// TODO: Move this into a transform/cuda kernel
+//			// Now populate the basis function for this state action pair
+//			// Note that each entry except for the first is a gaussian.
+//			int i = BASIS_SIZE * (action-1);
+//			phi[i] = 1.0f;
+//			
+//			// Health
+//			float over_health = state->stat_health - state->stat_max_health;
+//			if(over_health >= 0)
+//			{
+//				phi[i+1] = over_health;
+//				phi[i+2] = 1; // Max health
+//			}
+//			else
+//			{
+//				float percent_health = (float)state->stat_health/state->stat_max_health;
+//				if(percent_health < 0.20)
+//				{
+//					phi[i+3] = 1; // Critical health
+//				}
+//				else if(percent_health < 0.50)
+//				{
+//					phi[i+4] = 1;
+//				}
+//				else
+//				{
+//					phi[i+5] = 1;
+//				}
+//			}
+//
+//			// Armor
+//			float over_armor = state->stat_armor - 100;
+//			if(over_armor >= 0)
+//			{
+//				phi[i+6] = over_armor;
+//				phi[i+7] = 1.0;
+//			}
+//			else
+//			{
+//				float percent_armor = (float)state->stat_armor/100.0f;
+//				phi[i+8] = percent_armor;
+//			}
+//
+//			// Powerups
+//			phi[i+9] = state->pw_quad;
+//			phi[i+10] = state->pw_battlesuit;
+//			phi[i+11] = state->pw_haste;
+//			phi[i+12] = state->pw_invis;
+//			phi[i+13] = state->pw_regen;
+//			phi[i+14] = state->pw_flight;
+//			phi[i+15] = state->pw_scout;
+//			phi[i+16] = state->pw_guard;
+//			phi[i+17] = state->pw_doubler;
+//			phi[i+18] = state->pw_ammoregen;
+//			phi[i+19] = state->pw_invulnerability;
+//
+//			// enemy
+//			phi[i+20] = state->enemy;
+//			if(state->enemy_line_dist < 500)
+//			{
+//				phi[i+21] = 1;
+//			}
+//			else if(state->enemy_line_dist > 1500)
+//			{
+//				phi[i+22] = 1;
+//			}
+//			else
+//			{
+//				phi[i+23] = 1;
+//			}
+//			phi[i+24] = state->enemy_is_invisible;
+//			phi[i+25] = state->enemy_is_shooting;
+//
+//			// Ammo information
+//			phi[i+26] = state->wp_gauntlet;
+//			phi[i+27] = state->wp_machinegun;
+//			phi[i+28] = state->wp_shotgun;
+//			phi[i+29] = state->wp_grenade_launcher;
+//			phi[i+30] = state->wp_rocket_launcher;
+//			phi[i+31] = state->wp_lightning;
+//			phi[i+32] = state->wp_railgun;
+//			phi[i+33] = state->wp_plasmagun;
+//			phi[i+34] = state->wp_bfg;
+//			phi[i+35] = state->wp_grappling_hook;
+//
+//#if defined(VERBOSE_HIGH)
+//			PRINT(phi);
+//#endif
+//
+//			return phi;
+//		}
 
 // MEDIUM BASIS FUNCTION (6*29)
 //		vector_type basis_function(lspi_action_basis_t *state, int action)
@@ -634,7 +640,7 @@ class LspiAgent
 //			return phi;
 //		}
 
-// MEDIUM-SMALL BASIS FUNCTION (6*19)
+// MEDIUM-SMALL BASIS FUNCTION (6*20)
 //		vector_type basis_function(lspi_action_basis_t *state, int action)
 //		{
 //			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
@@ -709,31 +715,31 @@ class LspiAgent
 
 
 /// SMALL BASIS FUNCTION (6*5)
-//		vector_type basis_function(lspi_action_basis_t *state, int action)
-//		{
-//			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
-//			thrust::fill(phi.begin(), phi.end(), 0.0f);
-//			
-//#if defined(VERBOSE_HIGH)
-//			PRINT(phi);
-//#endif
-//
-//			// TODO: Move this into a transform/cuda kernel
-//			// Now populate the basis function for this state action pair
-//			// Note that each entry except for the first is a gaussian.
-//			int i = BASIS_SIZE * (action-1);
-//			phi[i] = 1.0f;
-//			
-//			phi[i+1] = state->stat_health;
-//			phi[i+2] = state->stat_armor;
-//			phi[i+3] = state->enemy;
-//			phi[i+4] = state->enemy_line_dist;
-//
-//#if defined(VERBOSE_HIGH)
-//			PRINT(phi);
-//#endif
-//
-//			return phi;
-//		}
+		vector_type basis_function(lspi_action_basis_t *state, int action)
+		{
+			vector_type phi(BASIS_SIZE*NUM_ACTIONS);
+			thrust::fill(phi.begin(), phi.end(), 0.0f);
+			
+#if defined(VERBOSE_HIGH)
+			PRINT(phi);
+#endif
+
+			// TODO: Move this into a transform/cuda kernel
+			// Now populate the basis function for this state action pair
+			// Note that each entry except for the first is a gaussian.
+			int i = BASIS_SIZE * (action-1);
+			phi[i] = 1.0f;
+			
+			phi[i+1] = state->stat_health;
+			phi[i+2] = state->stat_armor;
+			phi[i+3] = state->enemy;
+			phi[i+4] = state->enemy_line_dist;
+
+#if defined(VERBOSE_HIGH)
+			PRINT(phi);
+#endif
+
+			return phi;
+		}
 };
 

@@ -75,6 +75,11 @@ char nodeswitch[MAX_NODESWITCHES+1][144];
 lspi_action_basis_t *basis[MAX_CLIENTS];
 lspi_action_basis_t *last_basis[MAX_CLIENTS]; 
 int last_action[MAX_CLIENTS]; 
+#ifdef ONLINE_UPDATE
+	sample samples[MAX_UPDATES];
+	int s_index;
+	int s_mult;
+#endif
 
 // Used to determine when to check LSPI/Gradient bot actions
 int action_chosen[MAX_CLIENTS]; // Used to determine if an agent has chosen an action
@@ -1185,6 +1190,7 @@ void UpdateBasis(bot_state_t *bs)
 	aas_entityinfo_t entinfo;
 	bot_goal_t cur_goal;
 	float reward;
+	int cur_index;
 
 	if(last_action[bs->client] != -1) // If this isn't the first time we should update the "last basis" first
 	{
@@ -1296,6 +1302,29 @@ void UpdateBasis(bot_state_t *bs)
 			BotAI_Print(PRT_MESSAGE, "Gradient Bot kills another one: %d!\n", bs->num_kills);
 		}
 	}
+
+#ifdef ONLINE_UPDATE
+	cur_index = s_index + s_mult*(MAX_UPDATES/12);
+	if(bs->bottype && last_action[bs->client] > 0 && cur_index <= MAX_UPDATES)
+	{
+		if(s_index < MAX_UPDATES/12)
+		{
+			samples[cur_index].action = last_action[bs->client];
+			memcpy(samples[cur_index].state, last_basis[bs->client], sizeof(lspi_action_basis_t));
+			memcpy(samples[cur_index].final_state, basis[bs->client], sizeof(lspi_action_basis_t));
+		
+			s_index++;
+		}
+		else
+		{
+			if(LspiBot_Update(bs->client, samples, cur_index))
+			{
+				s_index = 0;
+				s_mult++;
+			}
+		}
+	}
+#endif
 
 	// Write down reward info
 	reward = calculateReward(basis[bs->client]);
@@ -1429,6 +1458,15 @@ void AI_Init(bot_state_t *bs)
 			total_updates[bs->client] += 1;
 		}
 #endif
+#ifdef ONLINE_UPDATE
+		for(s_index = 0; s_index < MAX_UPDATES; s_index++)
+		{
+			samples[s_index].state = malloc(sizeof(lspi_action_basis_t));
+			samples[s_index].final_state = malloc(sizeof(lspi_action_basis_t));
+		}
+		s_index = 0;
+		s_mult = 0;
+#endif
 	}
 	action_chosen[bs->client] = -1;
 	last_action[bs->client] = -1;
@@ -1471,6 +1509,7 @@ void AI_Shutdown(bot_state_t *bs)
 	fclose(sample_file[bs->client]);
 	free(last_basis[bs->client]);
 #endif
+
 	free(basis[bs->client]);
 	if(bs->bottype)
 	{
@@ -1497,6 +1536,14 @@ void AI_Shutdown(bot_state_t *bs)
 	}
 
 	fclose(reward_file[bs->client]);
+
+#ifdef ONLINE_UPDATE
+	for(s_index = 0; s_index < MAX_UPDATES; s_index++)
+	{
+		free(samples[s_index].state);
+		free(samples[s_index].final_state);
+	}
+#endif
 }
 
 int AIEnter_Next(bot_state_t *bs, char *s, int act)
