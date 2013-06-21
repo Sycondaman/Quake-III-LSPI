@@ -1304,10 +1304,10 @@ void UpdateBasis(bot_state_t *bs)
 	}
 
 #ifdef ONLINE_UPDATE
-	cur_index = s_index + s_mult*(MAX_UPDATES/12);
+	cur_index = s_index + s_mult*(MAX_UPDATES/20);
 	if(bs->bottype && last_action[bs->client] > 0 && cur_index <= MAX_UPDATES)
 	{
-		if(s_index < MAX_UPDATES/12)
+		if(s_index < MAX_UPDATES/20 && cur_index < MAX_UPDATES)
 		{
 			samples[cur_index].action = last_action[bs->client];
 			memcpy(samples[cur_index].state, last_basis[bs->client], sizeof(lspi_action_basis_t));
